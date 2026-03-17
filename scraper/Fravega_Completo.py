@@ -4,7 +4,9 @@ import pandas as pd
 import time
 import random
 import re
-
+import os
+import glob
+from datetime import datetime, timedelta
 # ==========================================
 # 1. LISTA DE CATEGORÍAS
 # ==========================================
@@ -50,6 +52,36 @@ marcas_conocidas = [
     'MIDEA', 'SURREY', 'ALCATEL', 'ZTE', 'BANGHO', 'PIONEER', 'BOSCH', 'BLACK+DECKER',
     'GAMA', 'REMINGTON', 'CHICCO', 'KIDDY', 'MACLAREN'
 ]
+
+def aplicar_politica_retencion(carpeta='data', dias_retencion=30):
+    print(f"\n🧹 Iniciando política de retención: eliminando CSVs mayores a {dias_retencion} días...")
+    if not os.path.exists(carpeta):
+        return
+
+    # Calculamos cuál es la fecha límite (hace 30 días)
+    fecha_limite = datetime.now() - timedelta(days=dias_retencion)
+    archivos_csv = glob.glob(f"{carpeta}/fravega_*.csv")
+    
+    eliminados = 0
+    for archivo in archivos_csv:
+        try:
+            # Extraemos la fecha del nombre del archivo (ej: data/fravega_2026-03-17.csv -> 2026-03-17)
+            nombre_base = os.path.basename(archivo)
+            fecha_str = nombre_base.replace('fravega_', '').replace('.csv', '')
+            fecha_archivo = datetime.strptime(fecha_str, '%Y-%m-%d')
+            
+            # Si el archivo es más viejo que la fecha límite, lo borramos
+            if fecha_archivo < fecha_limite:
+                os.remove(archivo)
+                eliminados += 1
+                print(f"   🗑️ Eliminado por antigüedad: {nombre_base}")
+        except Exception as e:
+            print(f"   ⚠️ Saltando archivo {archivo} (Formato no reconocido).")
+            
+    if eliminados == 0:
+        print("   ✨ No hay archivos antiguos para eliminar hoy.")
+    else:
+        print(f"   ✅ Limpieza exitosa: {eliminados} archivos eliminados.")
 
 def extraer_fravega_robusto(max_paginas=5):
     headers = {
@@ -204,9 +236,21 @@ def extraer_fravega_robusto(max_paginas=5):
 
     if datos_totales:
         df = pd.DataFrame(datos_totales)
-        nombre_archivo = f"catalogo_fravega_{time.strftime('%Y%m%d')}.csv"
+        
+        # --- LÓGICA DE DATA LAKE ---
+        carpeta_destino = 'data'
+        os.makedirs(carpeta_destino, exist_ok=True)
+        
+        # Guardamos con formato estricto YYYY-MM-DD para que la limpieza funcione
+        fecha_hoy = datetime.now().strftime('%Y-%m-%d')
+        nombre_archivo = f"{carpeta_destino}/fravega_{fecha_hoy}.csv"
+        
         df.to_csv(nombre_archivo, index=False, encoding='utf-8-sig')
-        print(f"\n🏆 ¡EXTRACCIÓN EXITOSA! Se guardaron {len(datos_totales)} productos en el CSV.")
+        print(f"\n🏆 ¡EXTRACCIÓN EXITOSA! Se guardaron {len(datos_totales)} productos en: {nombre_archivo}")
+        
+        # --- EJECUTAMOS LA LIMPIEZA ---
+        aplicar_politica_retencion(carpeta=carpeta_destino, dias_retencion=30)
+        
     else:
         print("\n❌ No se obtuvieron datos.")
 
