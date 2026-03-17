@@ -1,0 +1,37 @@
+name: Scraper Diario Frávega
+
+on:
+  schedule:
+    # Se ejecuta todos los días a las 9:00 AM UTC (6:00 AM hora de Argentina)
+    - cron: '0 9 * * *'
+  workflow_dispatch: # Esto agrega un botón para correrlo a mano cuando quieras probarlo
+
+jobs:
+  ejecutar-scraper:
+    runs-on: ubuntu-latest # Usa una compu virtual con Linux
+
+    steps:
+    - name: Descargar el repositorio
+      uses: actions/checkout@v3
+
+    - name: Instalar Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.13.7'
+
+    - name: Instalar librerías
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+
+    - name: Correr el Scraper
+      run: python scraper/Fravega_Completo.py
+
+    # 👇 ESTE ES EL PASO CLAVE QUE FALTABA 👇
+    - name: Guardar los datos en el repositorio
+      run: |
+        git config --global user.name 'GitHub Actions Bot'
+        git config --global user.email 'actions@github.com'
+        git add .
+        git commit -m "🤖 Actualización diaria de precios y limpieza" || echo "No hay cambios para subir"
+        git push
