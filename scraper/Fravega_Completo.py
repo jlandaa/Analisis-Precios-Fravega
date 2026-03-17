@@ -1,4 +1,4 @@
-import requests
+import cloudscraper
 from bs4 import BeautifulSoup
 import pandas as pd
 import time
@@ -84,14 +84,14 @@ def aplicar_politica_retencion(carpeta='data', dias_retencion=30):
         print(f"   ✅ Limpieza exitosa: {eliminados} archivos eliminados.")
 
 def extraer_fravega_robusto(max_paginas=5):
-    headers = {
-        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
-        "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8",
-        "Accept-Language": "es-AR,es;q=0.9"
-    }
-    
     datos_totales = []
-    session = requests.Session()
+    # 🚀Creamos un scraper que simula ser Chrome en Windows
+    scraper = cloudscraper.create_scraper(browser={
+        'browser': 'chrome',
+        'platform': 'windows',
+        'desktop': True
+    })
+    
 
     for cat in categorias_estrategicas:
         url_base = cat["url"]
@@ -109,7 +109,7 @@ def extraer_fravega_robusto(max_paginas=5):
             for intento in range(max_reintentos):
                 try:
                     time.sleep(random.uniform(2, 5))
-                    response = session.get(url, headers=headers, timeout=15)
+                    response = scraper.get(url, timeout=20)
                     
                     if response.status_code == 200:
                         exito_conexion = True
@@ -118,7 +118,7 @@ def extraer_fravega_robusto(max_paginas=5):
                         print(f"  ⚠️ Status {response.status_code} (Intento {intento + 1}/{max_reintentos}). Reintentando en 3s...")
                         time.sleep(3)
                         
-                except requests.exceptions.RequestException as e:
+                except Exception as e:
                     # Atrapamos micro-cortes, timeouts y "Response ended prematurely"
                     print(f"  🔄 Micro-corte detectado (Intento {intento + 1}/{max_reintentos}). Esperando 5s para reintentar...")
                     time.sleep(5) 
