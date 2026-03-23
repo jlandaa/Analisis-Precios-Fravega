@@ -55,9 +55,12 @@ pip install -r requirements.txt
 ```
 ## 3. Ejecutar el scraper:
 ```bash
-python scraper/main.py
+python scraper/Fravega_Completo.py
 ```
-## 4. Subir los datos resultantes a Databricks y ejecutar el notebook ETL_Retail.html.
+## 4. Subir los datos resultantes a Databricks y ejecutar el notebook
+```text
+notebooks/Scraping_Retail.ipynb
+```
 
 
 ## 👨‍💻 Sobre mí
