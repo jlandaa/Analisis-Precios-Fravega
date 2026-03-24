@@ -4,6 +4,9 @@ import pandas as pd
 import time
 import random
 import re
+import os
+import glob
+from datetime import datetime, timedelta
 
 # ==========================================
 # 1. LISTA DE CATEGORÍAS
@@ -48,15 +51,31 @@ marcas_conocidas = [
     'GAMA', 'REMINGTON', 'CHICCO', 'KIDDY', 'MACLAREN'
 ]
 
+def aplicar_politica_retencion(carpeta='data', dias_retencion=30):
+    print(f"\n🧹 Iniciando limpieza de CSVs mayores a {dias_retencion} días...")
+    if not os.path.exists(carpeta): return
+    fecha_limite = datetime.now() - timedelta(days=dias_retencion)
+    archivos_csv = glob.glob(f"{carpeta}/fravega_*.csv")
+    eliminados = 0
+    for archivo in archivos_csv:
+        try:
+            nombre_base = os.path.basename(archivo)
+            fecha_str = nombre_base.replace('fravega_', '').replace('.csv', '')
+            if datetime.strptime(fecha_str, '%Y-%m-%d') < fecha_limite:
+                os.remove(archivo)
+                eliminados += 1
+                print(f"   🗑️ Eliminado: {nombre_base}")
+        except: pass
+    print(f"   ✅ Limpieza exitosa: {eliminados} eliminados." if eliminados > 0 else "   ✨ Nada para limpiar hoy.")
+
 def extraer_fravega_robusto(max_paginas=5):
-    headers = {
-        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
-        "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8",
-        "Accept-Language": "es-AR,es;q=0.9"
-    }
-    
+    # Recuperamos la clave secreta desde GitHub Actions
+    API_KEY = os.environ.get('SCRAPER_API_KEY')
+    if not API_KEY:
+        print("❌ ERROR: No se encontró la SCRAPER_API_KEY en las variables de entorno.")
+        return
+
     datos_totales = []
-    session = requests.Session()
 
     for cat in categorias_estrategicas:
         url_base = cat["url"]
@@ -74,7 +93,9 @@ def extraer_fravega_robusto(max_paginas=5):
             for intento in range(max_reintentos):
                 try:
                     time.sleep(random.uniform(2, 5))
-                    response = session.get(url, headers=headers, timeout=15)
+                    # 🚀 Pasamos la petición por ScraperAPI
+                    payload = {'api_key': API_KEY, 'url': url, 'country_code': 'ar'}
+                    response = requests.get('http://api.scraperapi.com', params=payload, timeout=60)
                     
                     if response.status_code == 200:
                         exito_conexion = True
@@ -201,11 +222,11 @@ def extraer_fravega_robusto(max_paginas=5):
 
     if datos_totales:
         df = pd.DataFrame(datos_totales)
-        nombre_archivo = f"catalogo_fravega_{time.strftime('%Y%m%d')}.csv"
+        carpeta_destino = 'data'
+        os.makedirs(carpeta_destino, exist_ok=True)
+        nombre_archivo = f"{carpeta_destino}/fravega_{datetime.now().strftime('%Y-%m-%d')}.csv"
         df.to_csv(nombre_archivo, index=False, encoding='utf-8-sig')
-        print(f"\n🏆 ¡EXTRACCIÓN EXITOSA! Se guardaron {len(datos_totales)} productos en el CSV.")
+        print(f"\n🏆 EXITOSO: {len(datos_totales)} productos en {nombre_archivo}")
+        aplicar_politica_retencion(carpeta_destino, 30)
     else:
         print("\n❌ No se obtuvieron datos.")
-
-if __name__ == "__main__":
-    extraer_fravega_robusto(max_paginas=5)
