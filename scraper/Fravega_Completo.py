@@ -230,3 +230,6 @@ def extraer_fravega_robusto(max_paginas=5):
         aplicar_politica_retencion(carpeta_destino, 30)
     else:
         print("\n❌ No se obtuvieron datos.")
+
+if __name__ == "__main__":
+    extraer_fravega_robusto(max_paginas=5)
