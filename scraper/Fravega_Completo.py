@@ -138,8 +138,13 @@ def extraer_fravega_robusto(max_paginas=5):
                     sku_crudo = partes_url[-1] if partes_url else str(hash(url_producto))
                     sku_final = f"FRA-{sku_crudo[:40]}"
 
-                    # 🚀 MEJORA 1: Extraer el Nombre del Producto
-                    nombre_producto = link.text.strip()
+                    # 🚀 MEJORA 1: Extraer el Nombre del Producto sin la basura de precios
+                    nombre_bruto = link.text.strip()
+                    
+                    # Usamos una expresión regular para cortar el texto cuando aparece el signo $, "Vendido por" o "Llega en"
+                    nombre_limpio = re.split(r'\$|Vendido por|Precio s/imp|Llega en|Retiralo', nombre_bruto)[0].strip()
+                    nombre_producto = nombre_limpio
+                    
                     if len(nombre_producto) < 5:
                         span_titulo = contenedor.find('span', string=re.compile(r'[a-zA-Z]'))
                         nombre_producto = span_titulo.text.strip() if span_titulo else sku_crudo.replace('-', ' ').title()
